@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # coding=utf8
 from sys import version_info
 from re import compile
@@ -32,7 +33,7 @@ def downloader(url):
 def get_auth_link():
     data = downloader(try_url)
     if not data.startswith('<script>'):
-        print("The Auth Has passed already......")
+        print("You've already able to access the Network")
         exit(0)
     regs = compile(r"'(.+?)'")
     result = regs.findall(data)
@@ -65,12 +66,20 @@ def do_login(auth_link, username, password, qr_code=''):
 
 
 def check_success(content):
-    if '我要下线' not in content:
-        print("登录失败")
+    uname = compile("d.userName.innerText='(.+?)'").findall(content)
+    userip = compile("d.contentDive.userip='(.+?)'").findall(content)
+    time_left = compile("d.maxLeaving.innerText='(.+?)'").findall(content)
+    account_left = compile("d.accountInfo.innerText='(.+?)'").findall(content)
+    if not uname or not userip:
+        print('Logging Failed......')
         return False
-    ip = compile(r"IP :(.+?)<")
-    print("内网ip: {}".format(ip.findall(content)[0]))
-    return True
+    else:
+        print('Logging Succeeded')
+        print('Username: {}'.format(uname[0]))
+        print('IP: {}'.format(userip[0]))
+        print("Time Left: {}".format(time_left[0].decode('gbk')))
+        print("Account Remain: {}".format(account_left[0].decode('gbk')))
+        return True
 
 
 if __name__ == '__main__':
