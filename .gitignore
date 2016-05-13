@@ -62,4 +62,3 @@ target/
 .ipynb_checkpoints
 
 .idea
-config.py
