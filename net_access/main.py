@@ -1,27 +1,21 @@
 #!/usr/bin/env python
 # coding=utf8
 
-from sys import version_info, platform, argv
+from sys import platform, argv
 from re import compile, DOTALL
 import json
 import tempfile
 import os
 
-if version_info.major == 2:
-    from urllib2 import urlopen, URLError, Request, HTTPCookieProcessor, build_opener
-    from cookielib import CookieJar
-    from urllib import urlencode
-    import sys
-    reload(sys)
-    sys.setdefaultencoding('utf8')
-    cookie = CookieJar()
-    opener = build_opener(HTTPCookieProcessor(cookie))
-else:
-    from urllib.request import urlopen, URLError, Request, HTTPCookieProcessor, build_opener
-    from http.cookiejar import CookieJar
-    from urllib.parse import urlencode
-    cookie = CookieJar()
-    opener = build_opener(HTTPCookieProcessor(cookie))
+from urllib2 import urlopen, URLError, Request, HTTPCookieProcessor, build_opener
+from cookielib import CookieJar
+from urllib import urlencode
+import sys
+reload(sys)
+sys.setdefaultencoding('utf8')
+cookie = CookieJar()
+opener = build_opener(HTTPCookieProcessor(cookie))
+
 
 # this `try_url` does not require quit much but not https
 try_url = 'http://www.baidu.com'
@@ -32,9 +26,10 @@ ip_port = ''
 
 def downloader(url):
     try:
-        handle = urlopen(url, timeout=3)
-        return handle.read()
-    except Exception:
+        handle = urlopen(url)
+        return str(handle.read())
+    except Exception as e:
+        print(e)
         print('Failed to retrieve the DATA !!')
         exit(1)
 
@@ -65,20 +60,20 @@ def logout(uname):
 
 def get_auth_link():
     data = downloader(try_url)
-    if not data.startswith(b'<script>'):
+    if not data.startswith('<script>'):
         print("You've already able to access the Network")
         exit(0)
-    regs = compile(b"'(.+?)'")
+    regs = compile("'(.+?)'")
     result = regs.findall(data)
 
-    if not result or not result[0].startswith(b"http"):
+    if not result or not result[0].startswith("http"):
         print("Failed the Retrieve Auth Page !!")
         exit(1)
     return result[0]
 
 
 def do_login(auth_link, username, password, qr_code=''):
-    opener.open(auth_link)
+    # opener.open(auth_link)
     post_data = {
         # 'usernameHidden': '',
         # 'username_tip': 'Username',

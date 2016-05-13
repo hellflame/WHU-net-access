@@ -46,3 +46,9 @@
 
 之后就等着查看返回消息就好了
 
+##### 环境兼容
+
+>* python 2
+>* linux, mac os, windows
+
+

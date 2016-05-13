@@ -55,21 +55,30 @@ docs = """武大校园网终端认证
 
 之后就等着查看返回消息就好了
 
+环境兼容
+=========
+
+ *python2*
+
+ *linux, mac os, windows*
+
 """
 setup(
     name='net-access-whu',
-    version='0.1.0',
+    version='0.2.0',
     keywords=('network auth', 'WHU'),
     license='Apache License',
     description="终端登录武汉大学校园网",
     author="hellflame",
     author_email="hellflamedly@gmail.com",
     url="https://github.com/hellflame/WHU-net-access",
+    long_description=docs,
     packages=find_packages(),
     classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
         'Programming Language :: Python',
+        'Programming Language :: Python :: 2 :: Only',
         'Environment :: Console',
         'License :: OSI Approved :: Apache Software License',
         "Operating System :: OS Independent"
