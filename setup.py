@@ -65,7 +65,7 @@ docs = """武大校园网终端认证
 """
 setup(
     name='net-access-whu',
-    version='0.2.0',
+    version='0.3.0',
     keywords=('network auth', 'WHU'),
     license='Apache License',
     description="终端登录武汉大学校园网",
@@ -75,7 +75,7 @@ setup(
     long_description=docs,
     packages=find_packages(),
     classifiers=[
-        'Development Status :: 4 - Beta',
+        'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
         'Programming Language :: Python',
         'Programming Language :: Python :: 2 :: Only',

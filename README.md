@@ -52,3 +52,8 @@
 >* linux, mac os, windows
 
 
+##### Updates
+
+v0.3
+
+错误信息输出

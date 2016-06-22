@@ -101,7 +101,11 @@ def check_success(content):
     account_left = compile("d.accountInfo.innerText='(.+?)'").findall(content)
     logout_url = compile("d.toLogOut.href='(.+?)'").findall(content)
     if not uname or not userip:
-        print('Logging Failed......')
+        error_msg = compile("""<div id="errorInfo_center" val="(.+?)">""").findall(content)
+        if error_msg:
+            print("\033[01;31m{}\033[00m".format(error_msg[0].decode("gbk")))
+        else:
+            print('Logging Failed......')
         return False
     else:
         temp_dir = tempfile.gettempdir()
