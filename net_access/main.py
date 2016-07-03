@@ -7,7 +7,7 @@ import json
 import tempfile
 import os
 
-from urllib2 import urlopen, URLError, Request, HTTPCookieProcessor, build_opener
+from urllib2 import urlopen, HTTPCookieProcessor, build_opener
 from cookielib import CookieJar
 from urllib import urlencode
 import sys
@@ -17,7 +17,7 @@ cookie = CookieJar()
 opener = build_opener(HTTPCookieProcessor(cookie))
 
 
-# this `try_url` does not require quit much but not https
+# this `try_url` does not require quit much but not https, better with no redirection
 try_url = 'http://www.baidu.com'
 
 # ip and port of the url
@@ -26,8 +26,8 @@ ip_port = ''
 
 def downloader(url):
     try:
-        handle = urlopen(url)
-        return str(handle.read())
+        handle = urlopen(url, timeout=5)
+        return str(handle.read()), handle.url
     except Exception as e:
         print(e)
         print('Failed to retrieve the DATA !!')
@@ -39,49 +39,75 @@ def logout(uname):
         print("Username is necessary no matter who you are!!")
         return False
     temp_file = tempfile.gettempdir() + "/{}-whu.logout".format(uname)
-    if not os.path.exists(temp_file):
+    iis_temp = tempfile.gettempdir() + "/IIS-WEB.logout"
+    if not os.path.exists(temp_file) and not os.path.exists(iis_temp):
         print("You've NOT Login Yet!!!")
         exit(1)
-    with open(temp_file) as handle:
-        content = handle.read()
+    if os.path.exists(temp_file):
+        with open(temp_file) as handle:
+            content = handle.read()
+            mode = 'WHU'
+    else:
+        with open(iis_temp) as handle:
+            content = handle.read()
+            mode = "IIS"
+
     if not content:
         print("You've Logout already ~~")
         exit(0)
-    feed = downloader(content)
-    regs = compile("""window.location.replace\("(.+?)"\)""", DOTALL)
-    match = regs.findall(feed)
-    if match and 'goToLogout' in match[0]:
-        print("Logout Succeeded!")
-        os.unlink(temp_file)
-        return True
-    print("Logout Failed!")
-    return False
+
+    feed, url = downloader(content)
+
+    if mode == 'WHU':
+
+        regs = compile("""window.location.replace\("(.+?)"\)""", DOTALL)
+        match = regs.findall(feed)
+        if match and 'goToLogout' in match[0]:
+            print("Logout Succeeded!")
+            os.unlink(temp_file)
+            return True
+        print("Logout Failed!")
+        return False
+    else:
+        data_str = content.split("?")[-1]
+        req = opener.open(url, data=data_str)
+        result = req.read()
+        error_code = compile("<errcode>(.+?)</errcode>").findall(result)
+        msg = compile("<message>(.+?)</message>").findall(result)
+        if int(error_code[0]) == 0:
+            print "Logout Succeeded!"
+            os.unlink(iis_temp)
+            return True
+        else:
+            print "Logout Failed......"
+            print msg[0].strip()
+            return False
 
 
 def get_auth_link():
-    data = downloader(try_url)
-    if not data.startswith('<script>'):
+    data, url = downloader(try_url)
+
+    if url == try_url and not data.startswith("<script>") or url != try_url:
         print("You've already able to access the Network")
         exit(0)
+
+    if 'Portal登陆页面' in data:
+        return url, 'IIS'
+
     regs = compile("'(.+?)'")
     result = regs.findall(data)
 
-    if not result or not result[0].startswith("http"):
+    if result and result[0].startswith("http"):
+        return result[0], 'COMMON'
+    else:
         print("Failed the Retrieve Auth Page !!")
         exit(1)
-    return result[0]
 
 
 def do_login(auth_link, username, password, qr_code=''):
-    # opener.open(auth_link)
     post_data = {
-        # 'usernameHidden': '',
-        # 'username_tip': 'Username',
         'username': username,
-        # 'strTypeAu': '',
         'uuidQrCode': qr_code,
-        # 'authorMode': '',
-        # 'pwd_tip': 'Password',
         'pwd': password
     }
     post_link = auth_link.replace("index.jsp?", 'userV2.do?method=login&')
@@ -92,6 +118,38 @@ def do_login(auth_link, username, password, qr_code=''):
     global ip_port
     ip_port = ip_reg.findall(auth_link)[0]
     return content
+
+
+def iis_do_login(auth_link, username, password):
+    post_data = auth_link.split("?")[-1]
+    post_data += "&username={}&password={}".format(username, password)
+    post_link = auth_link.replace("login.html", 'do.portallogin')
+    try:
+        req = opener.open(post_link, post_data, timeout=5)
+        content = req.read()
+        global ip_port
+        ip_port = post_link
+        return content
+    except Exception as e:
+        print(e)
+        exit(1)
+
+
+def iis_check_success(content):
+    message = compile("<message>(.+?)</message>").findall(content)
+    error_code = compile("<errcode>(.+?)</errcode>").findall(content)
+    if error_code and int(error_code[0]) != 0:
+        print "\033[01;31m{}\033[00m".format(message[0].strip())
+        return False
+    else:
+        with open(tempfile.gettempdir() + "/IIS-WEB.logout", 'w') as handle:
+            handle.write(ip_port.replace("do.portallogin", 'do.portallogoff'))
+
+        ip = compile("wlanuserip=(.+?)&").findall(ip_port)
+
+        print "IIS-WEB Login \033[01;31mSucceeded\033[00m!!"
+        print "IP: \033[01;37m{}\033[00m".format(ip[0])
+        return True
 
 
 def check_success(content):
@@ -142,13 +200,24 @@ def help_menu():
         method 1. net-access-whu -u your_account -p your_password
         method 2. net-access-whu -c config.json
 
-        config.json has the format like below:
+        config.json has the format like below(older edition, works always fine with only one type of network):
             {
                 "username": "your_account",
                 "password": "your_password"
             }
+        or something like these
+            {
+                "COMMON": {
+                    "username": "your_xiaoyuanwang_account",
+                    "password": "your_xiaoyuanwang_password"
+                },
+                "IIS": {
+                    "username": "your_guoraun_account",
+                    "password": "your_guoruan_password"
+                }
+            }
 
-        Logout(username is necessary):
+        Logout(username is necessary for WHU network user, IIS user is not):
 
         method 1. net-access-whu -u your_account -d logout
         method 2. net-access-whu -c config.json -d logout
@@ -159,6 +228,16 @@ def help_menu():
 def main():
     if not len(argv) == 3 and not len(argv) == 5:
         return help_menu()
+    config = {
+        'COMMON': {
+            'username': '',
+            'password': ''
+        },
+        'IIS': {
+            'username': '',
+            'password': ''
+        }
+    }
     username = ''
     password = ''
     for i in argv[1:]:
@@ -167,11 +246,23 @@ def main():
                 reader = handle.read()
             try:
                 reader = json.loads(reader)
+                config = reader
             except Exception as e:
                 print(e)
                 return help_menu()
+
             username = reader.get("username", '')
             password = reader.get("password", '')
+
+            if not username and not password:
+                common = reader.get("COMMON", '')
+                iis = reader.get("IIS", '')
+                if common:
+                    username = common.get("username", '')
+                    password = common.get("password", '')
+                elif iis:
+                    username = iis.get("username", '')
+                    password = iis.get("password", '')
             break
         if i == '-u':
             username = argv[argv.index(i) + 1]
@@ -180,8 +271,18 @@ def main():
     if 'logout' in argv[1:]:
         return logout(uname=username)
 
-    auth_link = get_auth_link()
-    check_success(do_login(auth_link, username, password))
+    auth_link, web_type = get_auth_link()
+
+    if web_type == 'COMMON':
+        check_success(do_login(auth_link, username, password))
+    else:
+        from_config = config.get("IIS", {})
+        if from_config:
+            username = from_config.get("username", '')
+            password = from_config.get("password", '')
+        iis_check_success(iis_do_login(auth_link, username, password))
 
 if __name__ == '__main__':
     main()
+
+

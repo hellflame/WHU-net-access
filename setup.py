@@ -65,10 +65,10 @@ docs = """武大校园网终端认证
 """
 setup(
     name='net-access-whu',
-    version='0.3.0',
+    version='0.4.0',
     keywords=('network auth', 'WHU'),
     license='Apache License',
-    description="终端登录武汉大学校园网",
+    description="终端登录武汉大学校园网, 国软IIS-WEB",
     author="hellflame",
     author_email="hellflamedly@gmail.com",
     url="https://github.com/hellflame/WHU-net-access",
