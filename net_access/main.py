@@ -171,7 +171,7 @@ def check_success(content):
         with open(temp_file, 'w') as handle:
             handle.write('http://{}'.format(ip_port) + logout_url[0])
 
-        if 'linux' in platform:
+        if 'linux' in platform or 'darwin' in platform:
             print('Logging \033[01;31mSucceeded\033[00m!!\n')
             print('Username: \033[01;34m{}\033[00m'.format(uname[0]))
             print('IP: \033[01;37m{}\033[00m'.format(userip[0]))
