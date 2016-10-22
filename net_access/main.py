@@ -75,12 +75,12 @@ def logout(uname):
         error_code = compile("<errcode>(.+?)</errcode>").findall(result)
         msg = compile("<message>(.+?)</message>").findall(result)
         if int(error_code[0]) == 0:
-            print "Logout Succeeded!"
+            print("Logout Succeeded!")
             os.unlink(iis_temp)
             return True
         else:
-            print "Logout Failed......"
-            print msg[0].strip()
+            print("Logout Failed......")
+            print(msg[0].strip())
             return False
 
 
@@ -139,16 +139,22 @@ def iis_check_success(content):
     message = compile("<message>(.+?)</message>").findall(content)
     error_code = compile("<errcode>(.+?)</errcode>").findall(content)
     if error_code and int(error_code[0]) != 0:
-        print "\033[01;31m{}\033[00m".format(message[0].strip())
+        if 'linux' in platform or 'darwin' in platform:
+            print("\033[01;31m{}\033[00m".format(message[0].strip()))
+        else:
+            print("{}".format(message[0].strip()))
         return False
     else:
         with open(tempfile.gettempdir() + "/IIS-WEB.logout", 'w') as handle:
             handle.write(ip_port.replace("do.portallogin", 'do.portallogoff'))
 
         ip = compile("wlanuserip=(.+?)&").findall(ip_port)
-
-        print "IIS-WEB Login \033[01;31mSucceeded\033[00m!!"
-        print "IP: \033[01;37m{}\033[00m".format(ip[0])
+        if 'linux' in platform or 'darwin' in platform:
+            print("IIS-WEB Login \033[01;31mSucceeded\033[00m!!")
+            print("IP: \033[01;37m{}\033[00m".format(ip[0]))
+        else:
+            print("IIS-WEB Login Succeeded!!")
+            print("IP: {}".format(ip[0]))
         return True
 
 
@@ -161,7 +167,10 @@ def check_success(content):
     if not uname or not userip:
         error_msg = compile("""<div id="errorInfo_center" val="(.+?)">""").findall(content)
         if error_msg:
-            print("\033[01;31m{}\033[00m".format(error_msg[0].decode("gbk")))
+            if 'linux' in platform or 'darwin' in platform:
+                print("\033[01;31m{}\033[00m".format(error_msg[0].decode("gbk")))
+            else:
+                print("{}".format(error_msg[0]))
         else:
             print('Logging Failed......')
         return False
