@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # coding=utf8
 
-from sys import platform, argv
 from re import compile, DOTALL
 import json
 import tempfile
@@ -17,6 +16,9 @@ cookie = CookieJar()
 opener = build_opener(HTTPCookieProcessor(cookie))
 
 
+def std_write(thing):
+    sys.stdout.write("{}\r\n".format(thing))
+
 # this `try_url` does not require quit much but not https, better with no redirection
 try_url = 'http://www.baidu.com'
 
@@ -29,19 +31,18 @@ def downloader(url):
         handle = urlopen(url, timeout=5)
         return str(handle.read()), handle.url
     except Exception as e:
-        print(e)
-        print('Failed to retrieve the DATA !!')
+        std_write('Failed to retrieve the DATA with the error \033[01;31m{}\033[00m!!'.format(e))
         exit(1)
 
 
 def logout(uname):
     if not uname:
-        print("Username is necessary no matter who you are!!")
+        std_write("Username is necessary no matter who you are!!")
         return False
     temp_file = tempfile.gettempdir() + "/{}-whu.logout".format(uname)
     iis_temp = tempfile.gettempdir() + "/IIS-WEB.logout"
     if not os.path.exists(temp_file) and not os.path.exists(iis_temp):
-        print("You've NOT Login Yet!!!")
+        std_write("You've NOT Login Yet!!!")
         exit(1)
     if os.path.exists(temp_file):
         with open(temp_file) as handle:
@@ -53,7 +54,7 @@ def logout(uname):
             mode = "IIS"
 
     if not content:
-        print("You've Logout already ~~")
+        std_write("You've Logout already ~~")
         exit(0)
 
     feed, url = downloader(content)
@@ -63,10 +64,10 @@ def logout(uname):
         regs = compile("""window.location.replace\("(.+?)"\)""", DOTALL)
         match = regs.findall(feed)
         if match and 'goToLogout' in match[0]:
-            print("Logout Succeeded!")
+            std_write("Logout Succeeded!")
             os.unlink(temp_file)
             return True
-        print("Logout Failed!")
+        std_write("Logout Failed!")
         return False
     else:
         data_str = content.split("?")[-1]
@@ -75,12 +76,12 @@ def logout(uname):
         error_code = compile("<errcode>(.+?)</errcode>").findall(result)
         msg = compile("<message>(.+?)</message>").findall(result)
         if int(error_code[0]) == 0:
-            print("Logout Succeeded!")
+            std_write("Logout Succeeded!")
             os.unlink(iis_temp)
             return True
         else:
-            print("Logout Failed......")
-            print(msg[0].strip())
+            std_write("Logout Failed......")
+            std_write(msg[0].strip())
             return False
 
 
@@ -88,7 +89,7 @@ def get_auth_link():
     data, url = downloader(try_url)
 
     if url == try_url and not data.startswith("<script>") or url != try_url:
-        print("You've already able to access the Network")
+        std_write("You've already able to access the Network")
         exit(0)
 
     if 'Portal登陆页面' in data:
@@ -100,7 +101,7 @@ def get_auth_link():
     if result and result[0].startswith("http"):
         return result[0], 'COMMON'
     else:
-        print("Failed the Retrieve Auth Page !!")
+        std_write("Failed the Retrieve Auth Page !!")
         exit(1)
 
 
@@ -131,18 +132,19 @@ def iis_do_login(auth_link, username, password):
         ip_port = post_link
         return content
     except Exception as e:
-        print(e)
+        std_write(e)
         exit(1)
 
 
 def iis_check_success(content):
     message = compile("<message>(.+?)</message>").findall(content)
     error_code = compile("<errcode>(.+?)</errcode>").findall(content)
+    platform = sys.platform
     if error_code and int(error_code[0]) != 0:
         if 'linux' in platform or 'darwin' in platform:
-            print("\033[01;31m{}\033[00m".format(message[0].strip()))
+            std_write("\033[01;31m{}\033[00m".format(message[0].strip()))
         else:
-            print("{}".format(message[0].strip()))
+            std_write("{}".format(message[0].strip()))
         return False
     else:
         with open(tempfile.gettempdir() + "/IIS-WEB.logout", 'w') as handle:
@@ -150,11 +152,11 @@ def iis_check_success(content):
 
         ip = compile("wlanuserip=(.+?)&").findall(ip_port)
         if 'linux' in platform or 'darwin' in platform:
-            print("IIS-WEB Login \033[01;31mSucceeded\033[00m!!")
-            print("IP: \033[01;37m{}\033[00m".format(ip[0]))
+            std_write("IIS-WEB Login \033[01;31mSucceeded\033[00m!!")
+            std_write("IP: \033[01;37m{}\033[00m".format(ip[0]))
         else:
-            print("IIS-WEB Login Succeeded!!")
-            print("IP: {}".format(ip[0]))
+            std_write("IIS-WEB Login Succeeded!!")
+            std_write("IP: {}".format(ip[0]))
         return True
 
 
@@ -164,15 +166,16 @@ def check_success(content):
     time_left = compile("d.maxLeaving.innerText='(.+?)'").findall(content)
     account_left = compile("d.accountInfo.innerText='(.+?)'").findall(content)
     logout_url = compile("d.toLogOut.href='(.+?)'").findall(content)
+    platform = sys.platform
     if not uname or not userip:
         error_msg = compile("""<div id="errorInfo_center" val="(.+?)">""").findall(content)
         if error_msg:
             if 'linux' in platform or 'darwin' in platform:
-                print("\033[01;31m{}\033[00m".format(error_msg[0].decode("gbk")))
+                std_write("\033[01;31m{}\033[00m".format(error_msg[0].decode("gbk")))
             else:
-                print("{}".format(error_msg[0]))
+                std_write("{}".format(error_msg[0]))
         else:
-            print('Logging Failed......')
+            std_write('Logging Failed......')
         return False
     else:
         temp_dir = tempfile.gettempdir()
@@ -181,17 +184,17 @@ def check_success(content):
             handle.write('http://{}'.format(ip_port) + logout_url[0])
 
         if 'linux' in platform or 'darwin' in platform:
-            print('Logging \033[01;31mSucceeded\033[00m!!\n')
-            print('Username: \033[01;34m{}\033[00m'.format(uname[0]))
-            print('IP: \033[01;37m{}\033[00m'.format(userip[0]))
-            print("Time Left: \033[01;32m{}\033[00m".format(time_left[0].decode('gbk')))
-            print("Account Remain: \033[01;31m{}\033[00m\n".format(account_left[0].decode('gbk')))
+            std_write('Logging \033[01;31mSucceeded\033[00m!!\n')
+            std_write('Username: \033[01;34m{}\033[00m'.format(uname[0]))
+            std_write('IP: \033[01;37m{}\033[00m'.format(userip[0]))
+            std_write("Time Left: \033[01;32m{}\033[00m".format(time_left[0].decode('gbk')))
+            std_write("Account Remain: \033[01;31m{}\033[00m\n".format(account_left[0].decode('gbk')))
         else:
-            print('Logging Succeeded')
-            print('Username: {}'.format(uname[0]))
-            print('IP: {}'.format(userip[0]))
-            print("Time Left: {}".format(time_left[0]))
-            print("Account Remain: {}".format(account_left[0]))
+            std_write('Logging Succeeded')
+            std_write('Username: {}'.format(uname[0]))
+            std_write('IP: {}'.format(userip[0]))
+            std_write("Time Left: {}".format(time_left[0]))
+            std_write("Account Remain: {}".format(account_left[0]))
         return True
 
 
@@ -231,10 +234,11 @@ def help_menu():
         method 1. net-access-whu -u your_account -d logout
         method 2. net-access-whu -c config.json -d logout
     """
-    print(help_menu.__doc__)
+    std_write(help_menu.__doc__)
 
 
 def main():
+    argv = sys.argv
     if not len(argv) == 3 and not len(argv) == 5:
         return help_menu()
     config = {
@@ -257,7 +261,7 @@ def main():
                 reader = json.loads(reader)
                 config = reader
             except Exception as e:
-                print(e)
+                std_write(e)
                 return help_menu()
 
             username = reader.get("username", '')

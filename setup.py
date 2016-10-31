@@ -65,7 +65,7 @@ docs = """武大校园网终端认证
 """
 setup(
     name='net-access-whu',
-    version='0.4.2',
+    version='0.4.4',
     keywords=('network auth', 'WHU'),
     license='Apache License',
     description="终端登录武汉大学校园网, 国软IIS-WEB",
